@@ -1,4 +1,4 @@
-# csdd
+# stackato
 
 AWS CloudFormation stack drift detector.
 
