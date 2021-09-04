@@ -3,6 +3,9 @@ require 'open3'
 require 'optparse'
 require 'timeout'
 
+TIME_LIMIT = 300
+STATUS_CHECK_LIMIT = 10
+
 module Stackato
   @@client = nil
 
@@ -15,15 +18,6 @@ module Stackato
 
   module_function
 
-  def run_cmd!(cmd)
-    _, err, status = Open3.capture3(cmd)
-    unless err.empty?
-      puts err
-      exit(status.exitstatus)
-    end
-    status.exitstatus
-  end
-
   def detect(stack_name)
     resp = @@client.detect_stack_drift({ stack_name: stack_name })
     resp.stack_drift_detection_id
@@ -32,18 +26,15 @@ module Stackato
   def check_status(detection_id, attempts)
     begin
       count = 0
-      Timeout.timeout(300) {
+      Timeout.timeout(TIME_LIMIT) {
         while count < attempts do
           count += 1
-          # puts("attempts: #{count}")
-
           resp = describe(detection_id)
-          if resp.detection_status == 'DETECTION_COMPLETE'
-            puts("#{resp.detection_status}: #{resp.stack_drift_status}")
-            return resp.detection_status
-          elsif resp.detection_status == 'DETECTION_FAILED'
-            puts("#{resp.detection_status}: #{resp.detection_status_reason}")
-            return resp.detection_status
+          if ['DETECTION_COMPLETE', 'DETECTION_FAILED'].include?(resp.detection_status)
+            puts("detection_status: #{resp.detection_status}")
+            puts("detection_status_reason: #{resp.detection_status_reason}")
+            puts("stack_drift_status: #{resp.stack_drift_status}")
+            return resp
           end
 
           # resp.detection_status == 'DETECTION_IN_PROGRESS'
@@ -54,7 +45,7 @@ module Stackato
         puts('Check attempts exceeded.')
       end
     rescue Timeout::Error
-      puts "timeout"
+      puts 'Timeout'
     end
   end
 
@@ -83,8 +74,6 @@ if __FILE__ == $PROGRAM_NAME
 
   Stackato.set_client(profile)
   detection_id = Stackato.detect(stack_name)
-  puts(detection_id)
-
-  resp = Stackato.check_status(detection_id, 10)
+  Stackato.check_status(detection_id, STATUS_CHECK_LIMIT)
   exit(0)
 end
