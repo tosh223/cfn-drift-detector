@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AWS CloudFormation stack drift detector
+Parameters:
+  TargetStackId:
+    Type: String
+    Description: Target Stack Id
+    Default: ''
+  MaximumExecutionFrequency:
+    Type: String
+    Default: TwentyFour_Hours
+    Description: The frequency that you want AWS Config to run evaluations for the rule.
+    MinLength: 1
+    ConstraintDescription: This parameter is required.
+    AllowedValues:
+      - One_Hour
+      - Three_Hours
+      - Six_Hours
+      - Twelve_Hours
+      - TwentyFour_Hours
+  SlackWorkspaceId:
+    Type: String
+    Description: Slack Workspace Id
+    Default: ''
+  SlackChannelId:
+    Type: String
+    Description: Slack Channel Id
+    Default: ''
+
+Resources:
+  ########################################
+  # Config Rule
+  # http://s3.amazonaws.com/aws-configservice-us-east-1/cloudformation-templates-for-managed-rules/CLOUDFORMATION_STACK_DRIFT_DETECTION_CHECK.template
+  ########################################
+  ConfigRule:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: stack_drift_detected
+      InputParameters:
+        CloudformationRoleArn: !Ref ConfigRuleRole
+      Scope:
+        ComplianceResourceTypes: AWS::CloudFormation::Stack
+        ComplianceResourceId: !Ref TargetStackId
+      Source:
+        Owner: AWS
+        SourceIdentifier: CLOUDFORMATION_STACK_DRIFT_DETECTION_CHECK
+      MaximumExecutionFrequency: !Ref MaximumExecutionFrequency
+
+  ConfigRuleRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: stack_drift_detected_config_role
+        Description: IAM role for CloudFormation Drift Detection
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - config.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/ReadOnlyAccess
+        Policies:
+          - PolicyName: AllowAccessToDriftDetection
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - cloudformation:DetectStackResourceDrift
+                    - cloudformation:DescribeStackDriftDetectionStatus
+                    - cloudformation:DetectStackDrift
+                  Resource: "*"
+
+  ########################################
+  # Event Bridge
+  ########################################
+  EventsRule:
+    Type: AWS::Events::Rule
+    Properties: 
+      Name: stack_drift_detected_event_rule
+      EventPattern:
+        source:
+          - aws.config
+        detail-type:
+          - Config Rules Compliance Change
+        resources:
+          - !Ref ConfigRule
+        detail:
+          messageType:
+            - ComplianceChangeNotification
+      Targets:
+          - Arn: !Ref EventsTopic
+            Id: EventsTopic
+
+  ########################################
+  # SNS
+  ########################################
+  EventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: stack_drift_detected_topic
+
+  EventsTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sns:Publish'
+            Resource: '*'
+      Topics:
+        - !Ref EventsTopic
+
+  ########################################
+  # Chatbot
+  ########################################
+  ChatbotSlackChannel:
+    Type: AWS::Chatbot::SlackChannelConfiguration
+    Properties: 
+      ConfigurationName: stack_drift_detected_chatbot
+      IamRoleArn: !Ref ChatbotIamRole
+      SlackWorkspaceId: !Ref SlackWorkspaceId
+      SlackChannelId: !Ref SlackChannelId
+      SnsTopicArns: 
+        - !Ref EventsTopic
+
+  ChatbotIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: stack-drift-detected-chatbot-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: chatbot.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: stack-drift-detected-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:Describe*
+                  - cloudwatch:Get*
+                  - cloudwatch:List*
+                Resource:
+                  - "*"
