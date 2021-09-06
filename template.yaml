@@ -36,11 +36,12 @@ Resources:
   ConfigRule:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: stack_drift_detected
+      ConfigRuleName: stack_drift_detected_config
       InputParameters:
-        CloudformationRoleArn: !Ref ConfigRuleRole
+        cloudformationRoleArn: !GetAtt ConfigRuleRole.Arn
       Scope:
-        ComplianceResourceTypes: AWS::CloudFormation::Stack
+        ComplianceResourceTypes:
+          - AWS::CloudFormation::Stack
         ComplianceResourceId: !Ref TargetStackId
       Source:
         Owner: AWS
@@ -124,7 +125,7 @@ Resources:
     Type: AWS::Chatbot::SlackChannelConfiguration
     Properties: 
       ConfigurationName: stack_drift_detected_chatbot
-      IamRoleArn: !Ref ChatbotIamRole
+      IamRoleArn: !GetAtt ChatbotIamRole.Arn
       SlackWorkspaceId: !Ref SlackWorkspaceId
       SlackChannelId: !Ref SlackChannelId
       SnsTopicArns: 
