@@ -29,6 +29,21 @@ Parameters:
     Default: ''
 
 Resources:
+  FunctionChatPost:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stack_drift_detector
+      CodeUri: lambda
+      Handler: detector.handler
+      Runtime: ruby2.7
+      MemorySize: 128
+      Role: !GetAtt DetectDriftRole.Arn
+      Tracing: Active
+      Timeout: 30
+      Environment:
+        Variables:
+          STACK_ID: !Ref TargetStackId
+
   ########################################
   # Config Rule
   # http://s3.amazonaws.com/aws-configservice-us-east-1/cloudformation-templates-for-managed-rules/CLOUDFORMATION_STACK_DRIFT_DETECTION_CHECK.template
@@ -38,20 +53,19 @@ Resources:
     Properties:
       ConfigRuleName: stack_drift_detected_config
       InputParameters:
-        cloudformationRoleArn: !GetAtt ConfigRuleRole.Arn
+        cloudformationRoleArn: !GetAtt DetectDriftRole.Arn
       Scope:
         ComplianceResourceTypes:
           - AWS::CloudFormation::Stack
-        ComplianceResourceId: !Ref TargetStackId
       Source:
         Owner: AWS
         SourceIdentifier: CLOUDFORMATION_STACK_DRIFT_DETECTION_CHECK
       MaximumExecutionFrequency: !Ref MaximumExecutionFrequency
 
-  ConfigRuleRole:
+  DetectDriftRole:
       Type: AWS::IAM::Role
       Properties:
-        RoleName: stack_drift_detected_config_role
+        RoleName: stack_drift_detected_role
         Description: IAM role for CloudFormation Drift Detection
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
@@ -60,6 +74,7 @@ Resources:
               Principal:
                 Service:
                   - config.amazonaws.com
+                  - lambda.amazonaws.com
               Action:
                 - sts:AssumeRole
         ManagedPolicyArns:
