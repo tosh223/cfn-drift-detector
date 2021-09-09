@@ -63,33 +63,33 @@ Resources:
       MaximumExecutionFrequency: !Ref MaximumExecutionFrequency
 
   DetectDriftRole:
-      Type: AWS::IAM::Role
-      Properties:
-        RoleName: stack_drift_detected_role
-        Description: IAM role for CloudFormation Drift Detection
-        AssumeRolePolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service:
-                  - config.amazonaws.com
-                  - lambda.amazonaws.com
-              Action:
-                - sts:AssumeRole
-        ManagedPolicyArns:
-          - arn:aws:iam::aws:policy/ReadOnlyAccess
-        Policies:
-          - PolicyName: AllowAccessToDriftDetection
-            PolicyDocument:
-              Version: "2012-10-17"
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - cloudformation:DetectStackResourceDrift
-                    - cloudformation:DescribeStackDriftDetectionStatus
-                    - cloudformation:DetectStackDrift
-                  Resource: "*"
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: stack_drift_detected_role
+      Description: IAM role for CloudFormation Drift Detection
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - config.amazonaws.com
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+      Policies:
+        - PolicyName: AllowAccessToDriftDetection
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DetectStackResourceDrift
+                  - cloudformation:DescribeStackDriftDetectionStatus
+                  - cloudformation:DetectStackDrift
+                Resource: "*"
 
   ########################################
   # Event Bridge
@@ -109,8 +109,8 @@ Resources:
           messageType:
             - ComplianceChangeNotification
       Targets:
-          - Arn: !Ref EventsTopic
-            Id: EventsTopic
+        - Arn: !Ref EventsTopic
+          Id: EventsTopic
 
   ########################################
   # SNS
@@ -121,17 +121,30 @@ Resources:
       TopicName: stack_drift_detected_topic
 
   EventsTopicPolicy:
-    Type: 'AWS::SNS::TopicPolicy'
+    Type: AWS::SNS::TopicPolicy
     Properties:
       PolicyDocument:
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
               Service: events.amazonaws.com
-            Action: 'sns:Publish'
+            Action:
+              - sns:Publish
+              - sns:GetTopicAttributes
+              - sns:SetTopicAttributes
             Resource: '*'
       Topics:
         - !Ref EventsTopic
+
+  EventsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref EventsTopic
+      Endpoint: https://global.sns-api.chatbot.amazonaws.com
+      Protocol: https
+      RawMessageDelivery: false
+      Region: !Ref AWS::Region
 
   ########################################
   # Chatbot
