@@ -103,11 +103,16 @@ Resources:
           - aws.config
         detail-type:
           - Config Rules Compliance Change
-        resources:
-          - !Ref ConfigRule
         detail:
           messageType:
             - ComplianceChangeNotification
+          configRuleName:
+            - !Ref ConfigRule
+          resourceType:
+            - AWS::Config::ConfigRule
+          newEvaluationResult:
+            complianceType:
+              - NON_COMPLIANT
       Targets:
         - Arn: !Ref EventsTopic
           Id: EventsTopic
