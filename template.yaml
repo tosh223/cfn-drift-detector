@@ -106,13 +106,13 @@ Resources:
         detail:
           messageType:
             - ComplianceChangeNotification
-          configRuleName:
-            - !Ref ConfigRule
-          resourceType:
-            - AWS::Config::ConfigRule
-          newEvaluationResult:
-            complianceType:
-              - NON_COMPLIANT
+          # configRuleName:
+          #   - !Ref ConfigRule
+          # resourceType:
+          #   - AWS::Config::ConfigRule
+          # newEvaluationResult:
+          #   complianceType:
+          #     - NON_COMPLIANT
       Targets:
         - Arn: !Ref EventsTopic
           Id: EventsTopic
@@ -159,6 +159,7 @@ Resources:
     Properties: 
       ConfigurationName: stack_drift_detected_chatbot
       IamRoleArn: !GetAtt ChatbotIamRole.Arn
+      LoggingLevel: ERROR
       SlackWorkspaceId: !Ref SlackWorkspaceId
       SlackChannelId: !Ref SlackChannelId
       SnsTopicArns: 

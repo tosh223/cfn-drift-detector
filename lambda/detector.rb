@@ -3,9 +3,6 @@ require 'open3'
 require 'optparse'
 require 'timeout'
 
-TIME_LIMIT = 300
-STATUS_CHECK_LIMIT = 10
-
 module Stackato
   @@client = nil
 
@@ -26,8 +23,7 @@ end
 
 def handler(event:, context:)
   stack_name = ENV['STACK_ID']
-  profile =　nil
   
-  Stackato.set_client(profile)
+  Stackato.set_client(profile=nil)
   Stackato.detect(stack_name)
 end
