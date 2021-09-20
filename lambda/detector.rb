@@ -1,9 +1,6 @@
 require 'aws-sdk-cloudformation'
-require 'open3'
-require 'optparse'
-require 'timeout'
 
-module Stackato
+module Worker
   @@client = nil
 
   class << self
@@ -24,6 +21,6 @@ end
 def handler(event:, context:)
   stack_name = ENV['STACK_ID']
   
-  Stackato.set_client(profile=nil)
-  Stackato.detect(stack_name)
+  Worker.set_client(profile=nil)
+  Worker.detect(stack_name)
 end

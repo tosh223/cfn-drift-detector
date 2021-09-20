@@ -6,7 +6,7 @@ require 'timeout'
 TIME_LIMIT = 300
 STATUS_CHECK_LIMIT = 10
 
-module Stackato
+module Worker
   @@client = nil
 
   class << self
@@ -72,8 +72,8 @@ if __FILE__ == $PROGRAM_NAME
     end
   end
 
-  Stackato.set_client(profile)
-  detection_id = Stackato.detect(stack_name)
-  Stackato.check_status(detection_id, STATUS_CHECK_LIMIT)
+  Worker.set_client(profile)
+  detection_id = Worker.detect(stack_name)
+  Worker.check_status(detection_id, STATUS_CHECK_LIMIT)
   exit(0)
 end
