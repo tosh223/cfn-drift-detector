@@ -1,4 +1,4 @@
-# stackato
+# cfn-drift-detector
 
 AWS CloudFormation stack drift detector.
 
